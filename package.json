@@ -21,18 +21,20 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
     "axios": "^1.6.2",
-    "whois": "^2.13.5",
+    "cors": "^2.8.5",
+    "dns-packet": "^5.6.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "ipaddress": "^0.2.6",
+    "native-dns": "^0.7.0",
+    "pm2": "^5.3.0",
     "uuid": "^9.0.1",
-    "pm2": "^5.3.0"
+    "whois": "^2.13.5"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/node": "^20.10.5",
     "@types/uuid": "^9.0.7",
     "ts-node-dev": "^2.0.0",
