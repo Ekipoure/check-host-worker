@@ -1,26 +1,16 @@
-# Check-Host Worker Agent
+# Check-Host Agent
 
-Worker Agent API برای سرویس بررسی IP، Ping، HTTP، DNS و Port Checks - نوشته شده با TypeScript و PostgreSQL
+Agent ساده برای اجرای network checks - نوشته شده با TypeScript
 
-## ویژگی‌ها
+## معماری
 
-- ✅ **TypeScript** - کد type-safe و maintainable
-- ✅ **PostgreSQL** - Database برای ذخیره نتایج
-- ✅ **Agent Installation** - نصب خودکار به عنوان system service
-- ✅ **PM2 Integration** - مدیریت process با PM2
-- ✅ **IP Geolocation** - اطلاعات جغرافیایی IP از چندین منبع
-- ✅ **Ping Check** - بررسی reachability و latency
-- ✅ **HTTP/HTTPS Check** - بررسی performance وب‌سایت‌ها
-- ✅ **DNS Check** - بررسی DNS resolution
-- ✅ **TCP/UDP Port Check** - بررسی اتصال به port های مختلف
-- ✅ **Whois Lookup** - اطلاعات whois دامنه‌ها
-- ✅ **Subnet Calculator** - تبدیل IP range به CIDR و بالعکس
-
-## پیش‌نیازها
-
-- Node.js 18+ 
-- PostgreSQL 14+
-- npm یا yarn
+Agent یک Worker ساده است که:
+- ✅ درخواست task از سرور اصلی دریافت می‌کند
+- ✅ check را اجرا می‌کند
+- ✅ نتیجه را به سرور اصلی برمی‌گرداند
+- ❌ API endpoints عمومی ندارد
+- ❌ Database ندارد
+- ❌ نتایج را ذخیره نمی‌کند
 
 ## نصب
 
@@ -34,19 +24,13 @@ npm install
 
 # تنظیم environment variables
 cp .env.example .env
-# ویرایش .env و تنظیم DATABASE_URL و سایر متغیرها
-
-# Setup database
-npx prisma generate
-npx prisma migrate dev
+# ویرایش .env و تنظیم AGENT_ID و سایر متغیرها
 
 # Build project
 npm run build
 ```
 
-## نصب Agent
-
-برای نصب Agent به عنوان system service:
+## نصب Agent روی سرور
 
 ```bash
 # نصب Agent با PM2
@@ -59,97 +43,66 @@ pm2 save
 pm2 startup  # برای startup خودکار
 ```
 
-## اجرا
-
-### Development
-```bash
-npm run dev
-```
-
-### Production
-```bash
-npm start
-```
-
-### با PM2
-```bash
-pm2 start ecosystem.config.js
-pm2 logs check-host-worker
-```
-
 ## API Endpoints
 
-### Ping Check
+### Execute Task
 ```bash
-GET /check-ping?host=google.com&max_nodes=3
+POST /task/execute
+Content-Type: application/json
+X-API-Key: your-api-key (optional)
+
+{
+  "taskId": "unique-task-id",
+  "checkType": "ping|http|tcp|udp|dns|ip-info|whois|subnet-calculator",
+  "host": "google.com",
+  "options": {}
+}
 ```
 
-### HTTP Check
-```bash
-GET /check-http?host=https://google.com&max_nodes=3
+**Response:**
+```json
+{
+  "success": true,
+  "taskId": "unique-task-id",
+  "checkType": "ping",
+  "host": "google.com",
+  "agentId": "agent-001",
+  "nodeId": "agent-001.node.check-host.net",
+  "result": [...],
+  "timestamp": "2025-12-06T..."
+}
 ```
 
-### TCP Port Check
+### Health Check
 ```bash
-GET /check-tcp?host=google.com:443&max_nodes=3
+GET /health
 ```
 
-### UDP Port Check
+### Agent Info
 ```bash
-GET /check-udp?host=8.8.8.8:53&max_nodes=3
+GET /info
 ```
 
-### DNS Check
-```bash
-GET /check-dns?host=google.com&max_nodes=3
-```
+## نحوه کار
 
-### IP Info
-```bash
-GET /ip-info?host=8.8.8.8
-```
-
-### Whois
-```bash
-GET /whois?domain=google.com
-```
-
-### Subnet Calculator
-```bash
-GET /subnet-calculator?input=192.168.1.0-192.168.1.255
-GET /subnet-calculator?input=192.168.1.0/24
-```
-
-### Get Results
-```bash
-GET /check-result/{request_id}
-GET /check-result-extended/{request_id}
-```
-
-### Nodes
-```bash
-GET /nodes/ips
-GET /nodes/hosts
-```
+1. **سرور اصلی** درخواست check را از کاربر دریافت می‌کند
+2. **سرور اصلی** task را به Agent ها ارسال می‌کند
+3. **Agent** check را اجرا می‌کند
+4. **Agent** نتیجه را به سرور اصلی برمی‌گرداند
+5. **سرور اصلی** نتایج را جمع‌آوری و در دیتابیس ذخیره می‌کند
+6. **سرور اصلی** نتایج را به کاربر نمایش می‌دهد
 
 ## ساختار پروژه
 
 ```
 worker/
 ├── src/
-│   ├── config/          # Configuration
-│   ├── database/        # Prisma client
-│   ├── routes/          # API routes
-│   ├── services/         # Core services
-│   ├── scripts/         # Installation scripts
-│   ├── storage/         # Result storage
-│   ├── types/           # TypeScript types
-│   ├── utils/           # Helper functions
-│   └── index.ts         # Main entry point
-├── prisma/
-│   └── schema.prisma    # Database schema
-├── config/
-│   └── nodes.json       # Node configuration
+│   ├── routes/
+│   │   └── task.ts          # Task execution endpoint
+│   ├── services/            # Check services
+│   ├── types/               # TypeScript types
+│   ├── utils/               # Helper functions
+│   └── index.ts             # Main entry point
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -159,26 +112,16 @@ worker/
 
 ### Environment Variables
 
-- `DATABASE_URL` - PostgreSQL connection string (required)
-- `PORT` - Server port (default: 8000)
-- `HOST` - Server host (default: 0.0.0.0)
-- `BASE_URL` - Base URL for permanent links
-- `AGENT_ID` - Unique agent identifier
-- `AGENT_NAME` - Agent name
-- `AGENT_LOCATION` - Agent location
-- `AGENT_COUNTRY_CODE` - Country code
-- `AGENT_COUNTRY` - Country name
-- `AGENT_CITY` - City name
-- `AGENT_IP` - Agent IP address
-- `AGENT_ASN` - ASN number
-
-### Database Schema
-
-Prisma schema شامل:
-- `Agent` - اطلاعات agent ها
-- `CheckRequest` - درخواست‌های check
-- `CheckResult` - نتایج checks
-- `Node` - اطلاعات node ها
+- `AGENT_ID` - شناسه یکتا Agent (required)
+- `AGENT_NAME` - نام Agent (required)
+- `AGENT_LOCATION` - موقعیت جغرافیایی
+- `AGENT_COUNTRY_CODE` - کد کشور
+- `AGENT_COUNTRY` - نام کشور
+- `AGENT_CITY` - نام شهر
+- `AGENT_IP` - IP آدرس Agent
+- `AGENT_ASN` - شماره ASN
+- `API_KEY` - API key برای امنیت (optional)
+- `PORT` - Port برای Agent (default: 8000)
 
 ## مدیریت Agent
 
@@ -199,20 +142,27 @@ pm2 stop check-host-worker
 npm run agent:uninstall
 ```
 
-## توسعه
+## مثال استفاده از API
 
 ```bash
-# Development mode با hot reload
-npm run dev
+# Ping check
+curl -X POST http://agent-server:8000/task/execute \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "taskId": "task-123",
+    "checkType": "ping",
+    "host": "google.com"
+  }'
 
-# Build
-npm run build
-
-# Database migrations
-npm run migrate
-
-# Prisma Studio (GUI برای database)
-npm run studio
+# HTTP check
+curl -X POST http://agent-server:8000/task/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "taskId": "task-124",
+    "checkType": "http",
+    "host": "https://google.com"
+  }'
 ```
 
 ## License

@@ -1,11 +1,11 @@
 /**
- * Main Application Entry Point
+ * Agent Main Entry Point
+ * Simple worker that receives tasks and returns results
  */
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import routes from './routes';
-import { ResultStorage } from './storage/result-storage';
+import taskRouter from './routes/task';
 
 // Load environment variables
 dotenv.config();
@@ -19,43 +19,38 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/', routes);
-
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Check-Host Worker Agent API',
-    version: '1.0.0',
-    endpoints: {
-      ping: '/check-ping?host=<hostname>',
-      http: '/check-http?host=<url>',
-      tcp: '/check-tcp?host=<host:port>',
-      udp: '/check-udp?host=<host:port>',
-      dns: '/check-dns?host=<hostname>',
-      ip_info: '/ip-info?host=<ip_or_hostname>',
-      whois: '/whois?domain=<domain>',
-      subnet: '/subnet-calculator?input=<range_or_cidr>',
-      nodes: '/nodes/ips or /nodes/hosts'
-    }
-  });
-});
+// Task execution endpoint
+app.use('/task', taskRouter);
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy' });
+  res.json({ 
+    status: 'healthy',
+    agentId: process.env.AGENT_ID || 'unknown',
+    version: '1.0.0'
+  });
 });
 
-// Cleanup expired results every hour
-const resultStorage = new ResultStorage();
-setInterval(async () => {
-  await resultStorage.cleanupExpired();
-}, 60 * 60 * 1000); // 1 hour
+// Agent info
+app.get('/info', (req, res) => {
+  res.json({
+    agentId: process.env.AGENT_ID || 'unknown',
+    name: process.env.AGENT_NAME || 'Check-Host Agent',
+    location: process.env.AGENT_LOCATION,
+    countryCode: process.env.AGENT_COUNTRY_CODE,
+    country: process.env.AGENT_COUNTRY,
+    city: process.env.AGENT_CITY,
+    ip: process.env.AGENT_IP,
+    asn: process.env.AGENT_ASN,
+    version: '1.0.0'
+  });
+});
 
 // Start server
 app.listen(PORT, HOST, () => {
-  console.log(`🚀 Check-Host Worker Agent running on http://${HOST}:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 Check-Host Agent running on http://${HOST}:${PORT}`);
+  console.log(`📊 Agent ID: ${process.env.AGENT_ID || 'not configured'}`);
+  console.log(`📍 Location: ${process.env.AGENT_CITY || 'unknown'}, ${process.env.AGENT_COUNTRY || 'unknown'}`);
 });
 
 // Graceful shutdown
@@ -68,4 +63,3 @@ process.on('SIGINT', () => {
   console.log('SIGINT signal received: closing HTTP server');
   process.exit(0);
 });
-

@@ -87,35 +87,5 @@ export class PingService {
     return null;
   }
 
-  async pingFromNodes(host: string, nodes: Map<string, NodeInfo>): Promise<Record<string, any[]>> {
-    const tasks: Array<Promise<any>> = [];
-    const nodeIds: string[] = [];
-
-    for (const [nodeId, node] of nodes) {
-      nodeIds.push(nodeId);
-      tasks.push(this.pingHost(host, node));
-    }
-
-    const results = await Promise.all(tasks);
-    const resultMap: Record<string, any[]> = {};
-
-    for (let i = 0; i < nodeIds.length; i++) {
-      const nodeId = nodeIds[i];
-      const result = results[i];
-      const hostname = `${nodeId}.node.check-host.net`;
-      
-      // Convert PingResult to array format
-      resultMap[hostname] = result.map((pingResults: PingResult[]) => 
-        pingResults.map((r: any) => {
-          if (r === null) return null;
-          if (r.status === 'OK') return ['OK', r.time, r.ip];
-          if (r.status === 'TIMEOUT') return ['TIMEOUT', r.time];
-          return ['MALFORMED', r.time || 0];
-        })
-      );
-    }
-
-    return resultMap;
-  }
+  // Remove pingFromNodes - not needed for agent
 }
-

@@ -66,36 +66,5 @@ export class HTTPService {
     }
   }
 
-  async checkFromNodes(url: string, nodes: Map<string, NodeInfo>): Promise<Record<string, any[]>> {
-    const tasks: Array<Promise<any>> = [];
-    const nodeIds: string[] = [];
-
-    for (const [nodeId, node] of nodes) {
-      nodeIds.push(nodeId);
-      tasks.push(this.checkHTTP(url, node));
-    }
-
-    const results = await Promise.all(tasks);
-    const resultMap: Record<string, any[]> = {};
-
-    for (let i = 0; i < nodeIds.length; i++) {
-      const nodeId = nodeIds[i];
-      const result = results[i];
-      const hostname = `${nodeId}.node.check-host.net`;
-      
-      // Convert HTTPResult to array format
-      resultMap[hostname] = result.map((httpResults: HTTPResult[]) => 
-        httpResults.map((r: any) => [
-          r.success,
-          r.time,
-          r.message,
-          r.statusCode || null,
-          r.ip || null
-        ])
-      );
-    }
-
-    return resultMap;
-  }
+  // Remove checkFromNodes - not needed for agent
 }
-

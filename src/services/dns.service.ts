@@ -58,26 +58,5 @@ export class DNSService {
     return [result];
   }
 
-  async resolveFromNodes(host: string, nodes: Map<string, NodeInfo>): Promise<Record<string, any[]>> {
-    const tasks: Array<Promise<any>> = [];
-    const nodeIds: string[] = [];
-
-    for (const [nodeId, node] of nodes) {
-      nodeIds.push(nodeId);
-      tasks.push(this.resolveDNS(host, node));
-    }
-
-    const results = await Promise.all(tasks);
-    const resultMap: Record<string, any[]> = {};
-
-    for (let i = 0; i < nodeIds.length; i++) {
-      const nodeId = nodeIds[i];
-      const result = results[i];
-      const hostname = `${nodeId}.node.check-host.net`;
-      resultMap[hostname] = result;
-    }
-
-    return resultMap;
-  }
+  // Remove resolveFromNodes - not needed for agent
 }
-
