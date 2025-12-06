@@ -67,7 +67,7 @@ router.post('/execute', verifyApiKey, async (req: Request, res: Response) => {
     switch (checkType) {
       case 'ping':
         // Execute ping from this agent
-        const pingResult = await pingService.pingHost(host, agentInfo as any);
+        const pingResult = await pingService.pingHost(host, agentInfo as any, options);
         result = {
           taskId,
           checkType: 'ping',

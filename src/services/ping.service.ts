@@ -12,8 +12,9 @@ export class PingService {
   private pingCount = 4;
   private timeout = 3;
 
-  async pingHost(host: string, node: NodeInfo): Promise<PingResult[][]> {
+  async pingHost(host: string, node: NodeInfo, options?: { count?: number }): Promise<PingResult[][]> {
     const { hostname } = this.parseHost(host);
+    const count = options?.count || this.pingCount;
     
     const ip = await resolveHostname(hostname);
     if (!ip) {
@@ -21,9 +22,13 @@ export class PingService {
     }
 
     const results: PingResult[] = [];
-    for (let i = 0; i < this.pingCount; i++) {
+    for (let i = 0; i < count; i++) {
       const result = await this.pingIP(ip);
-      results.push(result);
+      // Always include IP in result, even if ping failed
+      results.push({
+        ...result,
+        ip: result.ip || ip
+      });
     }
 
     return [results];
@@ -59,15 +64,18 @@ export class PingService {
         ip
       };
     } catch (error: any) {
+      // Always include IP in result, even if ping failed
       if (error.code === 'ETIMEDOUT' || error.signal === 'SIGTERM') {
         return {
           status: 'TIMEOUT',
-          time: this.timeout
+          time: this.timeout,
+          ip
         };
       }
       return {
         status: 'MALFORMED',
-        time: 0
+        time: 0,
+        ip
       };
     }
   }
