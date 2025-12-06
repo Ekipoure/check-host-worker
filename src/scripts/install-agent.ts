@@ -1,0 +1,116 @@
+/**
+ * Agent Installation Script
+ * Installs the worker as a system service using PM2
+ */
+import * as fs from 'fs';
+import * as path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+interface AgentConfig {
+  agentId: string;
+  name: string;
+  location?: string;
+  countryCode?: string;
+  country?: string;
+  city?: string;
+  ip?: string;
+  asn?: string;
+}
+
+async function installAgent() {
+  console.log('🚀 Installing Check-Host Worker Agent...\n');
+
+  try {
+    // Check if PM2 is installed
+    try {
+      await execAsync('pm2 --version');
+    } catch {
+      console.log('📦 Installing PM2...');
+      await execAsync('npm install -g pm2');
+    }
+
+    // Read agent configuration from environment or prompt
+    const config: AgentConfig = {
+      agentId: process.env.AGENT_ID || `agent-${Date.now()}`,
+      name: process.env.AGENT_NAME || 'Check-Host Worker Agent',
+      location: process.env.AGENT_LOCATION,
+      countryCode: process.env.AGENT_COUNTRY_CODE,
+      country: process.env.AGENT_COUNTRY,
+      city: process.env.AGENT_CITY,
+      ip: process.env.AGENT_IP,
+      asn: process.env.AGENT_ASN
+    };
+
+    // Build the project
+    console.log('🔨 Building project...');
+    await execAsync('npm run build');
+
+    // Create PM2 ecosystem file
+    const ecosystemConfig = {
+      apps: [{
+        name: 'check-host-worker',
+        script: './dist/index.js',
+        instances: 1,
+        exec_mode: 'fork',
+        env: {
+          NODE_ENV: 'production',
+          ...process.env
+        },
+        error_file: './logs/error.log',
+        out_file: './logs/out.log',
+        log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+        merge_logs: true,
+        autorestart: true,
+        max_memory_restart: '1G'
+      }]
+    };
+
+    const ecosystemPath = path.join(process.cwd(), 'ecosystem.config.js');
+    fs.writeFileSync(
+      ecosystemPath,
+      `module.exports = ${JSON.stringify(ecosystemConfig, null, 2)};`
+    );
+
+    // Create logs directory
+    const logsDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+
+    // Start with PM2
+    console.log('🚀 Starting agent with PM2...');
+    await execAsync(`pm2 start ${ecosystemPath}`);
+    
+    // Save PM2 configuration
+    await execAsync('pm2 save');
+    
+    // Setup PM2 startup script
+    console.log('⚙️  Setting up PM2 startup script...');
+    const startupOutput = await execAsync('pm2 startup');
+    console.log('\n' + startupOutput.stdout);
+    console.log('Please run the command above to enable PM2 on system startup.\n');
+
+    console.log('✅ Agent installed successfully!');
+    console.log('\nUseful commands:');
+    console.log('  pm2 status          - Check agent status');
+    console.log('  pm2 logs            - View logs');
+    console.log('  pm2 restart check-host-worker - Restart agent');
+    console.log('  pm2 stop check-host-worker    - Stop agent');
+    console.log('  pm2 delete check-host-worker  - Remove agent\n');
+
+  } catch (error: any) {
+    console.error('❌ Error installing agent:', error.message);
+    process.exit(1);
+  }
+}
+
+// Run installation
+if (require.main === module) {
+  installAgent();
+}
+
+export { installAgent };
+

@@ -1,34 +1,18 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Virtual Environment
-venv/
-env/
-ENV/
-.venv
+# Build output
+dist/
+build/
+*.tsbuildinfo
 
 # Environment variables
 .env
 .env.local
+.env.*.local
 
 # IDE
 .vscode/
@@ -42,20 +26,20 @@ ENV/
 Thumbs.db
 
 # Logs
-*.log
 logs/
+*.log
+
+# PM2
+.pm2/
+ecosystem.config.js
 
 # Database
 *.db
 *.sqlite
 
 # Testing
-.pytest_cache/
-.coverage
-htmlcov/
+coverage/
+.nyc_output/
 
-# MyPy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
+# Prisma
+prisma/migrations/

@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Agent {
+  id            String   @id @default(uuid())
+  agentId       String   @unique
+  name          String
+  location      String?
+  countryCode   String?
+  country       String?
+  city          String?
+  ip            String?
+  asn           String?
+  status        String   @default("active") // active, inactive, maintenance
+  lastHeartbeat DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  checkResults CheckResult[]
+
+  @@map("agents")
+}
+
+model CheckRequest {
+  id            String   @id @default(uuid())
+  requestId     String   @unique
+  checkType     String   // ping, http, tcp, udp, dns
+  host          String
+  permanentLink String?
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  results       CheckResult[]
+
+  @@index([requestId])
+  @@index([expiresAt])
+  @@map("check_requests")
+}
+
+model CheckResult {
+  id            String   @id @default(uuid())
+  requestId    String
+  agentId      String
+  nodeId       String
+  resultData   Json     // Store result as JSON
+  status       String   @default("pending") // pending, completed, failed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  request      CheckRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  agent        Agent         @relation(fields: [agentId], references: [id])
+
+  @@index([requestId])
+  @@index([agentId])
+  @@map("check_results")
+}
+
+model Node {
+  id          String   @id @default(uuid())
+  nodeId      String   @unique
+  hostname    String
+  countryCode String
+  country     String
+  city        String
+  ip          String
+  asn         String
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("nodes")
+}
+

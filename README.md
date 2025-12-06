@@ -1,37 +1,80 @@
-# Check-Host Worker
+# Check-Host Worker Agent
 
-Worker API برای سرویس بررسی IP، Ping، HTTP، DNS و Port Checks
+Worker Agent API برای سرویس بررسی IP، Ping، HTTP، DNS و Port Checks - نوشته شده با TypeScript و PostgreSQL
 
 ## ویژگی‌ها
 
+- ✅ **TypeScript** - کد type-safe و maintainable
+- ✅ **PostgreSQL** - Database برای ذخیره نتایج
+- ✅ **Agent Installation** - نصب خودکار به عنوان system service
+- ✅ **PM2 Integration** - مدیریت process با PM2
 - ✅ **IP Geolocation** - اطلاعات جغرافیایی IP از چندین منبع
-- ✅ **Ping Check** - بررسی reachability و latency از چندین node
+- ✅ **Ping Check** - بررسی reachability و latency
 - ✅ **HTTP/HTTPS Check** - بررسی performance وب‌سایت‌ها
-- ✅ **DNS Check** - بررسی DNS resolution از چندین nameserver
+- ✅ **DNS Check** - بررسی DNS resolution
 - ✅ **TCP/UDP Port Check** - بررسی اتصال به port های مختلف
 - ✅ **Whois Lookup** - اطلاعات whois دامنه‌ها
 - ✅ **Subnet Calculator** - تبدیل IP range به CIDR و بالعکس
 
+## پیش‌نیازها
+
+- Node.js 18+ 
+- PostgreSQL 14+
+- npm یا yarn
+
 ## نصب
 
 ```bash
+# Clone repository
+git clone https://github.com/Ekipoure/check-host-worker.git
+cd check-host-worker
+
 # نصب dependencies
-pip install -r requirements.txt
+npm install
 
-# کپی فایل env
+# تنظیم environment variables
 cp .env.example .env
+# ویرایش .env و تنظیم DATABASE_URL و سایر متغیرها
 
-# ویرایش فایل .env و تنظیم API keys (اختیاری)
+# Setup database
+npx prisma generate
+npx prisma migrate dev
+
+# Build project
+npm run build
+```
+
+## نصب Agent
+
+برای نصب Agent به عنوان system service:
+
+```bash
+# نصب Agent با PM2
+npm run agent:install
+
+# یا دستی:
+npm run build
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup  # برای startup خودکار
 ```
 
 ## اجرا
 
+### Development
 ```bash
-# اجرای سرویس
-python main.py
+npm run dev
+```
 
-# یا با uvicorn
-uvicorn main:app --host 0.0.0.0 --port 8000
+### Production
+```bash
+npm start
+```
+
+### با PM2
+```bash
+pm2 start ecosystem.config.js
+pm2 logs check-host-worker
 ```
 
 ## API Endpoints
@@ -93,88 +136,84 @@ GET /nodes/hosts
 
 ```
 worker/
-├── api/
-│   └── routes.py              # API endpoints
+├── src/
+│   ├── config/          # Configuration
+│   ├── database/        # Prisma client
+│   ├── routes/          # API routes
+│   ├── services/         # Core services
+│   ├── scripts/         # Installation scripts
+│   ├── storage/         # Result storage
+│   ├── types/           # TypeScript types
+│   ├── utils/           # Helper functions
+│   └── index.ts         # Main entry point
+├── prisma/
+│   └── schema.prisma    # Database schema
 ├── config/
-│   └── nodes.json             # Node configuration
-├── models/
-│   └── schemas.py             # Data models
-├── nodes/
-│   └── node_manager.py        # Node management
-├── services/
-│   ├── ip_geolocation.py      # IP geolocation
-│   ├── ping_service.py        # Ping checks
-│   ├── http_service.py        # HTTP checks
-│   ├── dns_service.py         # DNS resolution
-│   ├── port_check_service.py  # Port checks
-│   ├── whois_service.py       # Whois lookups
-│   └── subnet_calculator.py   # Subnet calculations
-├── storage/
-│   └── result_storage.py      # Result storage
-├── utils/
-│   └── helpers.py             # Helper functions
-├── main.py                    # FastAPI application
-├── requirements.txt           # Dependencies
-└── README.md                  # Documentation
+│   └── nodes.json       # Node configuration
+├── package.json
+├── tsconfig.json
+└── README.md
 ```
 
 ## تنظیمات
 
 ### Environment Variables
 
-- `API_HOST`: Host برای API (default: 0.0.0.0)
-- `API_PORT`: Port برای API (default: 8000)
-- `BASE_URL`: Base URL برای permanent links
-- `IPAPI_KEY`: API key برای ipapi.co (اختیاری)
-- `IPGEOLOCATION_API_KEY`: API key برای ipgeolocation.io (اختیاری)
-- `IPINFO_API_KEY`: API key برای ipinfo.io (اختیاری)
+- `DATABASE_URL` - PostgreSQL connection string (required)
+- `PORT` - Server port (default: 8000)
+- `HOST` - Server host (default: 0.0.0.0)
+- `BASE_URL` - Base URL for permanent links
+- `AGENT_ID` - Unique agent identifier
+- `AGENT_NAME` - Agent name
+- `AGENT_LOCATION` - Agent location
+- `AGENT_COUNTRY_CODE` - Country code
+- `AGENT_COUNTRY` - Country name
+- `AGENT_CITY` - City name
+- `AGENT_IP` - Agent IP address
+- `AGENT_ASN` - ASN number
 
-### Node Configuration
+### Database Schema
 
-فایل `config/nodes.json` شامل تنظیمات node های مختلف است. می‌توانید node های جدید اضافه کنید.
+Prisma schema شامل:
+- `Agent` - اطلاعات agent ها
+- `CheckRequest` - درخواست‌های check
+- `CheckResult` - نتایج checks
+- `Node` - اطلاعات node ها
 
-## مثال استفاده
+## مدیریت Agent
 
-### Python
-```python
-import requests
-
-# Ping check
-response = requests.get("http://localhost:8000/check-ping?host=google.com")
-data = response.json()
-request_id = data["request_id"]
-
-# Get results
-results = requests.get(f"http://localhost:8000/check-result/{request_id}")
-print(results.json())
-```
-
-### cURL
 ```bash
-# Ping check
-curl "http://localhost:8000/check-ping?host=google.com&max_nodes=3"
+# مشاهده وضعیت
+pm2 status
 
-# Get results
-curl "http://localhost:8000/check-result/{request_id}"
+# مشاهده لاگ‌ها
+pm2 logs check-host-worker
+
+# Restart
+pm2 restart check-host-worker
+
+# Stop
+pm2 stop check-host-worker
+
+# حذف Agent
+npm run agent:uninstall
 ```
-
-## نکات مهم
-
-1. **Node Management**: در حال حاضر node ها به صورت local اجرا می‌شوند. برای production باید node های واقعی در سرورهای مختلف تنظیم شوند.
-
-2. **Result Storage**: در حال حاضر از in-memory storage استفاده می‌شود. برای production بهتر است از Redis استفاده شود.
-
-3. **Rate Limiting**: در حال حاضر rate limiting پیاده‌سازی نشده است. برای production باید اضافه شود.
-
-4. **Error Handling**: Error handling پایه پیاده‌سازی شده است. می‌توانید بهبود دهید.
 
 ## توسعه
 
-برای اضافه کردن سرویس جدید:
+```bash
+# Development mode با hot reload
+npm run dev
 
-1. فایل سرویس جدید در `services/` ایجاد کنید
-2. Route جدید در `api/routes.py` اضافه کنید
-3. Schema جدید در `models/schemas.py` اضافه کنید (در صورت نیاز)
+# Build
+npm run build
+
+# Database migrations
+npm run migrate
+
+# Prisma Studio (GUI برای database)
+npm run studio
+```
 
 ## License
 

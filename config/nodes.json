@@ -1,45 +1,25 @@
 {
   "nodes": {
     "us1": {
-      "hostname": "us1.node.check-host.net",
-      "country_code": "us",
+      "countryCode": "us",
       "country": "USA",
       "city": "Los Angeles",
       "ip": "5.253.30.82",
       "asn": "AS18978"
     },
     "ir1": {
-      "hostname": "ir1.node.check-host.net",
-      "country_code": "ir",
+      "countryCode": "ir",
       "country": "Iran",
       "city": "Tehran",
       "ip": "2.147.76.51",
       "asn": "AS58224"
     },
     "de1": {
-      "hostname": "de1.node.check-host.net",
-      "country_code": "de",
+      "countryCode": "de",
       "country": "Germany",
       "city": "Frankfurt",
       "ip": "46.4.143.48",
       "asn": "AS24940"
-    },
-    "nl1": {
-      "hostname": "nl1.node.check-host.net",
-      "country_code": "nl",
-      "country": "Netherlands",
-      "city": "Amsterdam",
-      "ip": "185.159.82.88",
-      "asn": "AS14576"
-    },
-    "ru1": {
-      "hostname": "ru1.node.check-host.net",
-      "country_code": "ru",
-      "country": "Russia",
-      "city": "Moscow",
-      "ip": "185.159.82.88",
-      "asn": "AS14576"
     }
   }
 }
-
