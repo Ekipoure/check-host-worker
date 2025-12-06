@@ -3,7 +3,7 @@
  */
 import { v4 as uuidv4 } from 'uuid';
 import * as ipaddress from 'ipaddress';
-import { isIP } from 'dns';
+import { isIP } from 'net';
 
 export function generateRequestId(): string {
   return uuidv4().replace(/-/g, '').substring(0, 12);
@@ -47,14 +47,18 @@ export function parseHostPort(host: string): { hostname: string; port?: number }
 
 export function ipRangeToCIDR(startIP: string, endIP: string): string | null {
   try {
-    const start = ipaddress.IPv4.parse(startIP);
-    const end = ipaddress.IPv4.parse(endIP);
+    const start = ipaddress.Ipv4.create(startIP);
+    const end = ipaddress.Ipv4.create(endIP);
     
     // Find the network that contains both IPs
     for (let prefixLen = 32; prefixLen >= 0; prefixLen--) {
-      const network = start.network(prefixLen);
-      if (network && end.inside(network)) {
-        return network.toString();
+      try {
+        const testNetwork = start.change_prefix(prefixLen);
+        if (testNetwork && testNetwork.includes(end)) {
+          return testNetwork.to_s() + '/' + prefixLen;
+        }
+      } catch {
+        // Continue to next prefix
       }
     }
   } catch (error) {
@@ -66,10 +70,10 @@ export function ipRangeToCIDR(startIP: string, endIP: string): string | null {
 
 export function cidrToIPRange(cidr: string): { start: string; end: string } | null {
   try {
-    const network = ipaddress.IPv4.parseCIDR(cidr);
+    const network = ipaddress.Ipv4.create(cidr);
     return {
-      start: network.first().toString(),
-      end: network.last().toString()
+      start: network.first().to_s(),
+      end: network.last().to_s()
     };
   } catch (error) {
     console.error('Error converting CIDR to IP range:', error);

@@ -47,6 +47,7 @@ export interface TCPResult {
   time?: number;
   address?: string;
   error?: string;
+  note?: string;
 }
 
 export interface IPGeolocationData {

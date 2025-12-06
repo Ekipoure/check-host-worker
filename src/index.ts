@@ -64,8 +64,9 @@ app.get('/info', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, HOST, () => {
-  console.log(`🚀 Check-Host Agent running on http://${HOST}:${PORT}`);
+const port = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
+app.listen(port, HOST, () => {
+  console.log(`🚀 Check-Host Agent running on http://${HOST}:${port}`);
   console.log(`📊 Agent ID: ${process.env.AGENT_ID || 'not configured'}`);
   console.log(`📍 Location: ${process.env.AGENT_CITY || 'unknown'}, ${process.env.AGENT_COUNTRY || 'unknown'}`);
 });

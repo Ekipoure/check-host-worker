@@ -24,10 +24,11 @@ export class SubnetCalculatorService {
         result.cidr = input;
 
         try {
-          const network = ipaddress.IPv4.parseCIDR(input);
-          result.networkAddress = network.first().toString();
-          result.broadcastAddress = network.last().toString();
-          result.totalHosts = network.length();
+          const network = ipaddress.Ipv4.create(input);
+          result.networkAddress = network.first().to_s();
+          result.broadcastAddress = network.last().to_s();
+          const size = network.size();
+          result.totalHosts = typeof size === 'number' ? size : Number(size.toString());
         } catch (error) {
           console.error('Error parsing CIDR:', error);
         }
@@ -42,10 +43,11 @@ export class SubnetCalculatorService {
           result.cidr = cidr;
 
           try {
-            const network = ipaddress.IPv4.parseCIDR(cidr);
-            result.networkAddress = network.first().toString();
-            result.broadcastAddress = network.last().toString();
-            result.totalHosts = network.length();
+            const network = ipaddress.Ipv4.create(cidr);
+            result.networkAddress = network.first().to_s();
+            result.broadcastAddress = network.last().to_s();
+            const size = network.size();
+            result.totalHosts = typeof size === 'number' ? size : Number(size.toString());
           } catch (error) {
             console.error('Error parsing CIDR:', error);
           }

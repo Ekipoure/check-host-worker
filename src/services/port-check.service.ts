@@ -82,21 +82,22 @@ export class PortCheckService {
           return;
         }
 
-        socket.setTimeout(1000);
-        socket.once('message', () => {
-          socket.close();
-          resolve([{
-            time: Math.round(elapsed * 1000) / 1000,
-            address: ip
-          }]);
-        });
-
-        socket.once('timeout', () => {
+        // Use a timer for UDP timeout since dgram.Socket doesn't have setTimeout
+        const timeoutId = setTimeout(() => {
           socket.close();
           resolve([{
             time: Math.round(elapsed * 1000) / 1000,
             address: ip,
             note: 'No response received'
+          }]);
+        }, 1000);
+
+        socket.once('message', () => {
+          clearTimeout(timeoutId);
+          socket.close();
+          resolve([{
+            time: Math.round(elapsed * 1000) / 1000,
+            address: ip
           }]);
         });
       });
