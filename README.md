@@ -112,7 +112,7 @@ worker/
 
 ### Environment Variables
 
-- `AGENT_ID` - شناسه یکتا Agent (required)
+- `AGENT_ID` - شناسه یکتا Agent (required - به صورت خودکار توسط سیستم نصب تولید می‌شود)
 - `AGENT_NAME` - نام Agent (required)
 - `AGENT_LOCATION` - موقعیت جغرافیایی
 - `AGENT_COUNTRY_CODE` - کد کشور
@@ -121,7 +121,28 @@ worker/
 - `AGENT_IP` - IP آدرس Agent
 - `AGENT_ASN` - شماره ASN
 - `API_KEY` - API key برای امنیت (optional)
+  - اگر تنظیم شود، وب‌سایت باید همین key را در `WORKER_API_KEY` تنظیم کند
+  - درخواست‌ها باید header `X-API-Key` را داشته باشند
 - `PORT` - Port برای Agent (default: 8000)
+- `HOST` - Host برای Agent (default: 0.0.0.0)
+
+### ارتباط با وب‌سایت
+
+برای ارتباط صحیح بین worker و وب‌سایت:
+
+1. **در worker** (`.env`):
+   ```env
+   API_KEY=your-secret-key-here
+   PORT=8000
+   ```
+
+2. **در web** (`.env`):
+   ```env
+   WORKER_API_URL=http://localhost:8000
+   WORKER_API_KEY=your-secret-key-here
+   ```
+
+نکته: `WORKER_API_KEY` در web باید با `API_KEY` در worker یکسان باشد.
 
 ## مدیریت Agent
 

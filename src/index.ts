@@ -24,17 +24,34 @@ app.use('/task', taskRouter);
 
 // Health check
 app.get('/health', (req, res) => {
+  const agentId = process.env.AGENT_ID;
+  if (!agentId) {
+    return res.status(500).json({ 
+      status: 'error',
+      error: 'AGENT_ID not configured',
+      message: 'AGENT_ID must be set in environment variables'
+    });
+  }
+  
   res.json({ 
     status: 'healthy',
-    agentId: process.env.AGENT_ID || 'unknown',
+    agentId: agentId,
     version: '1.0.0'
   });
 });
 
 // Agent info
 app.get('/info', (req, res) => {
+  const agentId = process.env.AGENT_ID;
+  if (!agentId) {
+    return res.status(500).json({ 
+      error: 'AGENT_ID not configured',
+      message: 'AGENT_ID must be set in environment variables'
+    });
+  }
+  
   res.json({
-    agentId: process.env.AGENT_ID || 'unknown',
+    agentId: agentId,
     name: process.env.AGENT_NAME || 'Check-Host Agent',
     location: process.env.AGENT_LOCATION,
     countryCode: process.env.AGENT_COUNTRY_CODE,

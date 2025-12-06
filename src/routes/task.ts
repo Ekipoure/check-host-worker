@@ -23,8 +23,15 @@ const whoisService = new WhoisService();
 const subnetCalculatorService = new SubnetCalculatorService();
 
 // Agent info (for this specific agent instance)
+// AGENT_ID is required and should be set by deployment system
+const agentId = process.env.AGENT_ID;
+if (!agentId) {
+  console.error('❌ Error: AGENT_ID is required but not set in environment variables');
+  console.error('   Please ensure AGENT_ID is set in your .env file');
+}
+
 const agentInfo = {
-  agentId: process.env.AGENT_ID || 'unknown',
+  agentId: agentId || 'unknown',
   countryCode: process.env.AGENT_COUNTRY_CODE || '',
   country: process.env.AGENT_COUNTRY || '',
   city: process.env.AGENT_CITY || '',
