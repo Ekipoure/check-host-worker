@@ -71,12 +71,14 @@ export class IPGeolocationService {
   }
 
   private async getFromIPGeolocation(ip: string): Promise<IPGeolocationData | null> {
+    // Skip this service if API key is not provided
+    if (!this.ipgeolocationKey) {
+      return null;
+    }
+
     try {
       const url = 'https://api.ipgeolocation.io/ipgeo';
-      const params: any = { ip };
-      if (this.ipgeolocationKey) {
-        params.apiKey = this.ipgeolocationKey;
-      }
+      const params: any = { ip, apiKey: this.ipgeolocationKey };
 
       const response = await axios.get(url, { params, timeout: 5000 });
       const data = response.data;
