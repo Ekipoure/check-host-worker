@@ -56,9 +56,31 @@ async function installAgent() {
       asn: process.env.AGENT_ASN
     };
 
-    // Build the project
-    console.log('🔨 Building project...');
-    await execAsync('npm run build');
+    // Build the project (skip if already built in deployment process)
+    // Check if dist folder exists and has recent files
+    const distPath = path.join(process.cwd(), 'dist');
+    const indexJsPath = path.join(distPath, 'index.js');
+    let needsBuild = true;
+    
+    if (fs.existsSync(distPath) && fs.existsSync(indexJsPath)) {
+      try {
+        const distStat = fs.statSync(distPath);
+        const indexStat = fs.statSync(indexJsPath);
+        // Build if older than 1 minute
+        const oneMinuteAgo = Date.now() - 60000;
+        needsBuild = distStat.mtime.getTime() < oneMinuteAgo || indexStat.mtime.getTime() < oneMinuteAgo;
+      } catch (error) {
+        // If stat fails, assume we need to build
+        needsBuild = true;
+      }
+    }
+    
+    if (needsBuild) {
+      console.log('🔨 Building project...');
+      await execAsync('npm run build');
+    } else {
+      console.log('✅ Project already built, skipping build step');
+    }
 
     // Create PM2 ecosystem file
     const ecosystemConfig = {
@@ -92,9 +114,25 @@ async function installAgent() {
       fs.mkdirSync(logsDir, { recursive: true });
     }
 
-    // Start with PM2
-    console.log('🚀 Starting agent with PM2...');
-    await execAsync(`pm2 start ${ecosystemPath}`);
+    // Check if PM2 process is already running
+    let isRunning = false;
+    try {
+      const pm2ListOutput = await execAsync('pm2 list --no-color');
+      isRunning = pm2ListOutput.stdout.includes('check-host-worker') && 
+                  (pm2ListOutput.stdout.includes('online') || pm2ListOutput.stdout.includes('│ online'));
+    } catch (error) {
+      // PM2 list failed, assume not running
+    }
+
+    if (isRunning) {
+      // Process is already running, restart it
+      console.log('🔄 Restarting agent with PM2...');
+      await execAsync('pm2 restart check-host-worker');
+    } else {
+      // Start with PM2
+      console.log('🚀 Starting agent with PM2...');
+      await execAsync(`pm2 start ${ecosystemPath}`);
+    }
     
     // Save PM2 configuration
     await execAsync('pm2 save');
