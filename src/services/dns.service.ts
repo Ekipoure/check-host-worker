@@ -2,10 +2,17 @@
  * DNS Service - Perform DNS resolution checks
  */
 import * as dns from 'dns/promises';
-import * as nativeDns from 'native-dns';
 import { promisify } from 'util';
 import { NodeInfo, DNSRecord } from '../types';
 import { isValidIP, resolveHostname } from '../utils/helpers';
+
+// Try to load native-dns, but make it optional
+let nativeDns: any = null;
+try {
+  nativeDns = require('native-dns');
+} catch (error) {
+  console.warn('native-dns module not available, will use fallback DNS resolution');
+}
 
 const resolve4 = promisify(dns.resolve4);
 const resolve6 = promisify(dns.resolve6);
@@ -30,11 +37,12 @@ export class DNSService {
     let ttl: number | undefined = undefined;
 
     // Use native-dns to get TTL for A records
-    try {
-      const question = nativeDns.Question({
-        name: hostname,
-        type: 'A',
-      });
+    if (nativeDns) {
+      try {
+        const question = nativeDns.Question({
+          name: hostname,
+          type: 'A',
+        });
 
       const req = nativeDns.Request({
         question: question,
@@ -94,9 +102,14 @@ export class DNSService {
           ttl = aRecordsWithTTL[0].ttl;
         }
       }
-    } catch (error) {
-      // Fallback to standard dns.resolve4 if native-dns fails
-      console.warn('native-dns failed for A records, using fallback:', error);
+      } catch (error) {
+        // Fallback to standard dns.resolve4 if native-dns fails
+        console.warn('native-dns failed for A records, using fallback:', error);
+      }
+    }
+    
+    // Fallback to standard dns.resolve4 if native-dns is not available or failed
+    if (result.A.length === 0) {
       try {
         const aRecords = await resolve4(hostname) as string[];
         result.A = aRecords;
@@ -106,11 +119,12 @@ export class DNSService {
     }
 
     // Use native-dns to get TTL for AAAA records
-    try {
-      const question = nativeDns.Question({
-        name: hostname,
-        type: 'AAAA',
-      });
+    if (nativeDns) {
+      try {
+        const question = nativeDns.Question({
+          name: hostname,
+          type: 'AAAA',
+        });
 
       const req = nativeDns.Request({
         question: question,
@@ -170,9 +184,14 @@ export class DNSService {
           ttl = aaaaRecordsWithTTL[0].ttl;
         }
       }
-    } catch (error) {
-      // Fallback to standard dns.resolve6 if native-dns fails
-      console.warn('native-dns failed for AAAA records, using fallback:', error);
+      } catch (error) {
+        // Fallback to standard dns.resolve6 if native-dns fails
+        console.warn('native-dns failed for AAAA records, using fallback:', error);
+      }
+    }
+    
+    // Fallback to standard dns.resolve6 if native-dns is not available or failed
+    if (result.AAAA.length === 0) {
       try {
         const aaaaRecords = await resolve6(hostname) as string[];
         result.AAAA = aaaaRecords;
