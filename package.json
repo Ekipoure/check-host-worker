@@ -1,0 +1,43 @@
+{
+  "name": "check-host-worker",
+  "version": "1.0.0",
+  "description": "Check-Host Worker Agent - Simple task executor",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "agent:install": "node dist/scripts/install-agent.js",
+    "agent:uninstall": "node dist/scripts/uninstall-agent.js"
+  },
+  "keywords": [
+    "network",
+    "ping",
+    "dns",
+    "http",
+    "monitoring",
+    "agent"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "dns-packet": "^5.6.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "ipaddress": "^0.2.6",
+    "native-dns": "^0.7.0",
+    "pm2": "^5.3.0",
+    "uuid": "^9.0.1",
+    "whois": "^2.13.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.5",
+    "@types/uuid": "^9.0.7",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}
