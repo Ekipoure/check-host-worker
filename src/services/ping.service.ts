@@ -55,17 +55,75 @@ export class PingService {
         ? `ping -n 1 -w ${this.timeout * 1000} ${ip}`
         : `ping -c 1 -W ${this.timeout} ${ip}`;
 
-      const { stdout } = await execAsync(cmd, { timeout: this.timeout + 1 });
+      const { stdout, stderr } = await execAsync(cmd, { timeout: (this.timeout + 1) * 1000 });
+      
+      // Debug logging (can be removed in production)
+      if (stderr && stderr.trim()) {
+        console.log(`Ping stderr for ${ip}:`, stderr);
+      }
+      
       const time = this.parsePingTime(stdout, isWindows);
+      
+      // Debug logging
+      if (time === null) {
+        console.log(`Could not parse ping time for ${ip}. Output:`, stdout.substring(0, 200));
+      }
+
+      // If we couldn't parse the time, check if ping actually succeeded
+      // On Linux, a successful ping will have "1 received" in the output
+      // On Windows, a successful ping will have "Reply from" in the output
+      if (time === null) {
+        const hasSuccess = isWindows 
+          ? stdout.includes('Reply from') || stdout.includes('bytes=')
+          : stdout.includes('1 received') || stdout.match(/time=/) !== null;
+        
+        if (!hasSuccess) {
+          // Ping command didn't fail, but no successful response
+          return {
+            status: 'TIMEOUT',
+            time: this.timeout,
+            ip
+          };
+        }
+        
+        // Ping succeeded but we couldn't parse time - try alternative patterns
+        // Try to extract time from different formats
+        const altMatch = stdout.match(/(\d+\.?\d*)\s*ms/i);
+        if (altMatch) {
+          const parsedTime = parseFloat(altMatch[1]) / 1000.0;
+          return {
+            status: 'OK',
+            time: parsedTime,
+            ip
+          };
+        }
+        
+        // If we still can't parse, but ping succeeded, return with 0 time
+        // This is better than marking it as failed
+        return {
+          status: 'OK',
+          time: 0,
+          ip
+        };
+      }
 
       return {
         status: 'OK',
-        time: time || 0,
+        time: time,
         ip
       };
     } catch (error: any) {
+      // Debug logging
+      console.log(`Ping error for ${ip}:`, {
+        code: error.code,
+        signal: error.signal,
+        message: error.message,
+        stdout: error.stdout?.substring(0, 200),
+        stderr: error.stderr?.substring(0, 200)
+      });
+      
       // Always include IP in result, even if ping failed
-      if (error.code === 'ETIMEDOUT' || error.signal === 'SIGTERM') {
+      if (error.code === 'ETIMEDOUT' || error.signal === 'SIGTERM' || error.code === 'TIMEOUT') {
         return {
           status: 'TIMEOUT',
           time: this.timeout,
@@ -82,12 +140,31 @@ export class PingService {
 
   private parsePingTime(output: string, isWindows: boolean): number | null {
     if (isWindows) {
-      const match = output.match(/time[<=](\d+)ms/i);
+      // Try multiple patterns for Windows ping output
+      // Format: "time=123ms" or "time<123ms" or "time<=123ms"
+      let match = output.match(/time[<=](\d+)ms/i);
+      if (match) {
+        return parseFloat(match[1]) / 1000.0;
+      }
+      // Alternative: "Reply from ... time=123ms"
+      match = output.match(/time=(\d+)ms/i);
       if (match) {
         return parseFloat(match[1]) / 1000.0;
       }
     } else {
-      const match = output.match(/time=([\d.]+)\s*ms/i);
+      // Linux ping output: "time=12.345 ms" or "time=12.345ms"
+      // Try the standard format first
+      let match = output.match(/time=([\d.]+)\s*ms/i);
+      if (match) {
+        return parseFloat(match[1]) / 1000.0;
+      }
+      // Try without space: "time=12.345ms"
+      match = output.match(/time=([\d.]+)ms/i);
+      if (match) {
+        return parseFloat(match[1]) / 1000.0;
+      }
+      // Try alternative format from some ping implementations
+      match = output.match(/(\d+\.?\d*)\s*ms/i);
       if (match) {
         return parseFloat(match[1]) / 1000.0;
       }
