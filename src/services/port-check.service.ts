@@ -88,7 +88,7 @@ export class PortCheckService {
         }
       });
 
-      socket.send(Buffer.from('test'), targetPort, ip, (error) => {
+      socket.send(Buffer.from('test'), targetPort, ip, (error: NodeJS.ErrnoException | null) => {
         const elapsed = (Date.now() - startTime) / 1000;
         
         if (error) {
