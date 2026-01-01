@@ -57,17 +57,7 @@ export class PingService {
 
       const { stdout, stderr } = await execAsync(cmd, { timeout: (this.timeout + 1) * 1000 });
       
-      // Debug logging (can be removed in production)
-      if (stderr && stderr.trim()) {
-        console.log(`Ping stderr for ${ip}:`, stderr);
-      }
-      
       const time = this.parsePingTime(stdout, isWindows);
-      
-      // Debug logging
-      if (time === null) {
-        console.log(`Could not parse ping time for ${ip}. Output:`, stdout.substring(0, 200));
-      }
 
       // If we couldn't parse the time, check if ping actually succeeded
       // On Linux, a successful ping will have "1 received" in the output
@@ -113,8 +103,8 @@ export class PingService {
         ip
       };
     } catch (error: any) {
-      // Debug logging
-      console.log(`Ping error for ${ip}:`, {
+      // Only log actual errors
+      console.error(`Ping error for ${ip}:`, {
         code: error.code,
         signal: error.signal,
         message: error.message,

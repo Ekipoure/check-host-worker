@@ -26,7 +26,9 @@ export class IPGeolocationService {
       this.getFromIPAPI(ip),
       this.getFromIPGeolocation(ip),
       this.getFromIPInfo(ip),
-      this.getFromIPAPICom(ip)
+      this.getFromIPAPICom(ip),
+      this.getFromIPWhois(ip),
+      this.getFromGeoJS(ip)
     ];
 
     const results = await Promise.allSettled(tasks);
@@ -167,6 +169,65 @@ export class IPGeolocationService {
       }
     } catch (error) {
       console.error('Error getting data from ip-api.com:', error);
+    }
+    return null;
+  }
+
+  private async getFromIPWhois(ip: string): Promise<IPGeolocationData | null> {
+    try {
+      const url = `https://ipwhois.app/json/${ip}`;
+      
+      const response = await axios.get(url, { timeout: 5000 });
+      const data = response.data;
+
+      if (data.success) {
+        return {
+          ip,
+          country: data.country,
+          countryCode: data.country_code,
+          region: data.region,
+          city: data.city,
+          postalCode: data.postal,
+          timezone: data.timezone?.name || data.timezone,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          asn: data.asn,
+          organization: data.org,
+          isp: data.isp,
+          source: 'ipwhois.app'
+        };
+      }
+    } catch (error) {
+      console.error('Error getting data from ipwhois.app:', error);
+    }
+    return null;
+  }
+
+  private async getFromGeoJS(ip: string): Promise<IPGeolocationData | null> {
+    try {
+      const url = `https://get.geojs.io/v1/ip/geo/${ip}.json`;
+      
+      const response = await axios.get(url, { timeout: 5000 });
+      const data = response.data;
+
+      if (data && data.country) {
+        return {
+          ip,
+          country: data.country,
+          countryCode: data.country_code,
+          region: data.region || undefined,
+          city: data.city || undefined,
+          timezone: data.timezone,
+          latitude: data.latitude ? parseFloat(String(data.latitude)) : undefined,
+          longitude: data.longitude ? parseFloat(String(data.longitude)) : undefined,
+          organization: data.organization || data.organization_name,
+          isp: data.organization || data.organization_name,
+          asn: data.asn ? String(data.asn) : undefined,
+          source: 'geojs.io'
+        };
+      }
+    } catch (error) {
+      console.error('Error getting data from geojs.io:', error);
     }
     return null;
   }
