@@ -134,14 +134,130 @@ async function installAgent() {
       await execAsync(`pm2 start ${ecosystemPath}`);
     }
     
-    // Save PM2 configuration
-    await execAsync('pm2 save');
-    
-    // Setup PM2 startup script
+    // Setup PM2 startup script (must be done before pm2 save)
     console.log('⚙️  Setting up PM2 startup script...');
-    const startupOutput = await execAsync('pm2 startup');
-    console.log('\n' + startupOutput.stdout);
-    console.log('Please run the command above to enable PM2 on system startup.\n');
+    let startupConfigured = false;
+    
+    try {
+      const startupOutput = await execAsync('pm2 startup');
+      console.log(startupOutput.stdout);
+      
+      // Extract the sudo command from pm2 startup output
+      // PM2 startup output typically contains a line like:
+      // "sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u username --hp /home/username"
+      const outputLines = startupOutput.stdout.split('\n');
+      let startupCommand: string | null = null;
+      
+      for (const line of outputLines) {
+        // Look for lines that start with "sudo" and contain "pm2 startup"
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('sudo') && trimmedLine.includes('pm2 startup')) {
+          startupCommand = trimmedLine;
+          break;
+        }
+      }
+      
+      if (startupCommand) {
+        console.log(`🔧 Executing startup command: ${startupCommand}`);
+        try {
+          // Execute the startup command
+          const startupResult = await execAsync(startupCommand);
+          console.log(startupResult.stdout);
+          if (startupResult.stderr && startupResult.stderr.trim()) {
+            console.log(startupResult.stderr);
+          }
+          console.log('✅ PM2 startup script configured successfully');
+          startupConfigured = true;
+        } catch (startupError: any) {
+          // If sudo command fails, try alternative method
+          console.warn('⚠️  Could not execute PM2 startup command with sudo.');
+          console.warn(`   Error: ${startupError.message}`);
+          
+          // Try alternative: get user info and construct command directly
+          try {
+            const userInfo = await execAsync('whoami');
+            const homeInfo = await execAsync('echo $HOME');
+            const username = userInfo.stdout.trim();
+            const homeDir = homeInfo.stdout.trim();
+            const nodePath = await execAsync('which node');
+            const nodeDir = nodePath.stdout.trim().replace('/bin/node', '');
+            const pm2Path = await execAsync('which pm2');
+            const pm2Dir = pm2Path.stdout.trim().replace('/bin/pm2', '');
+            
+            // Try to detect init system
+            let initSystem = 'systemd';
+            try {
+              await execAsync('which systemctl');
+              // systemctl exists, use systemd
+              initSystem = 'systemd';
+            } catch {
+              // systemctl not found, try other init systems
+              try {
+                await execAsync('ls /etc/init.d/pm2-init.sh');
+                initSystem = 'upstart';
+              } catch {
+                // Default to systemd
+                initSystem = 'systemd';
+              }
+            }
+            
+            const altCommand = `sudo env PATH=$PATH:${nodeDir}/bin:${pm2Dir}/bin pm2 startup ${initSystem} -u ${username} --hp ${homeDir}`;
+            console.log(`🔄 Trying alternative method: ${altCommand}`);
+            
+            try {
+              const altResult = await execAsync(altCommand);
+              console.log(altResult.stdout);
+              if (altResult.stderr && altResult.stderr.trim()) {
+                console.log(altResult.stderr);
+              }
+              console.log('✅ PM2 startup script configured successfully (alternative method)');
+              startupConfigured = true;
+            } catch (altError: any) {
+              console.warn('⚠️  Alternative method also failed.');
+              console.warn(`   Error: ${altError.message}`);
+              console.warn('   Please run the command manually with sudo privileges:');
+              console.warn(`   ${startupCommand}\n`);
+            }
+          } catch (infoError: any) {
+            console.warn('⚠️  Could not get system information for alternative method.');
+            console.warn('   Please run the command manually with sudo privileges:');
+            console.warn(`   ${startupCommand}\n`);
+          }
+        }
+      } else {
+        // Check if PM2 startup is already configured
+        try {
+          // Check if startup script already exists
+          const checkStartup = await execAsync('pm2 startup 2>&1');
+          if (checkStartup.stdout.includes('already') || 
+              checkStartup.stdout.includes('exists') ||
+              checkStartup.stdout.includes('already configured')) {
+            console.log('✅ PM2 startup script is already configured');
+            startupConfigured = true;
+          } else {
+            console.warn('⚠️  Could not extract startup command from PM2 output.');
+            console.warn('   Please run "pm2 startup" manually and execute the provided command.');
+          }
+        } catch {
+          // Ignore errors in checking
+        }
+      }
+    } catch (startupError: any) {
+      console.warn('⚠️  Warning: Could not setup PM2 startup script.');
+      console.warn(`   Error: ${startupError.message}`);
+      console.warn('   Please run "pm2 startup" manually and execute the provided command.\n');
+    }
+    
+    if (!startupConfigured) {
+      console.warn('⚠️  PM2 startup script was not configured automatically.');
+      console.warn('   The agent will NOT start automatically after server restart.');
+      console.warn('   Please configure it manually by running: pm2 startup\n');
+    }
+    
+    // Save PM2 configuration (must be done after pm2 startup)
+    console.log('💾 Saving PM2 configuration...');
+    await execAsync('pm2 save');
+    console.log('✅ PM2 configuration saved');
 
     console.log('✅ Agent installed successfully!');
     console.log('\nUseful commands:');
