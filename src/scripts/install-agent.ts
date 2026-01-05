@@ -45,6 +45,9 @@ async function installAgent() {
       process.exit(1);
     }
 
+    // Create unique PM2 process name based on agent ID
+    const pm2ProcessName = `check-host-worker-${agentId}`;
+
     const config: AgentConfig = {
       agentId: agentId,
       name: process.env.AGENT_NAME || 'Check-Host Worker Agent',
@@ -85,7 +88,7 @@ async function installAgent() {
     // Create PM2 ecosystem file
     const ecosystemConfig = {
       apps: [{
-        name: 'check-host-worker',
+        name: pm2ProcessName,
         script: './dist/index.js',
         instances: 1,
         exec_mode: 'fork',
@@ -114,25 +117,18 @@ async function installAgent() {
       fs.mkdirSync(logsDir, { recursive: true });
     }
 
-    // Check if PM2 process is already running
-    let isRunning = false;
+    // Always delete existing process if it exists (ignore errors), then start fresh
+    // This ensures a clean start every time
+    console.log(`🗑️  Removing any existing process (${pm2ProcessName}) if exists...`);
     try {
-      const pm2ListOutput = await execAsync('pm2 list --no-color');
-      isRunning = pm2ListOutput.stdout.includes('check-host-worker') && 
-                  (pm2ListOutput.stdout.includes('online') || pm2ListOutput.stdout.includes('│ online'));
-    } catch (error) {
-      // PM2 list failed, assume not running
+      await execAsync(`pm2 delete ${pm2ProcessName} || true`);
+    } catch {
+      // Ignore delete errors - process might not exist
     }
 
-    if (isRunning) {
-      // Process is already running, restart it
-      console.log('🔄 Restarting agent with PM2...');
-      await execAsync('pm2 restart check-host-worker');
-    } else {
-      // Start with PM2
-      console.log('🚀 Starting agent with PM2...');
-      await execAsync(`pm2 start ${ecosystemPath}`);
-    }
+    // Start the agent with PM2
+    console.log(`🚀 Starting agent with PM2 (${pm2ProcessName})...`);
+    await execAsync(`pm2 start ${ecosystemPath}`);
     
     // Setup PM2 startup script (must be done before pm2 save)
     console.log('⚙️  Setting up PM2 startup script...');
@@ -261,11 +257,11 @@ async function installAgent() {
 
     console.log('✅ Agent installed successfully!');
     console.log('\nUseful commands:');
-    console.log('  pm2 status          - Check agent status');
-    console.log('  pm2 logs            - View logs');
-    console.log('  pm2 restart check-host-worker - Restart agent');
-    console.log('  pm2 stop check-host-worker    - Stop agent');
-    console.log('  pm2 delete check-host-worker  - Remove agent\n');
+    console.log(`  pm2 status                    - Check agent status`);
+    console.log(`  pm2 logs ${pm2ProcessName}     - View logs`);
+    console.log(`  pm2 restart ${pm2ProcessName}  - Restart agent`);
+    console.log(`  pm2 stop ${pm2ProcessName}      - Stop agent`);
+    console.log(`  pm2 delete ${pm2ProcessName}   - Remove agent\n`);
 
   } catch (error: any) {
     console.error('❌ Error installing agent:', error.message);
