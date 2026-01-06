@@ -1,52 +1,50 @@
-# Check-Host Agent
+Check-Host Agent
 
-Agent ساده برای اجرای network checks - نوشته شده با TypeScript
+A simple agent for executing network checks — written in TypeScript.
 
-## معماری
+Architecture
 
-Agent یک Worker ساده است که:
-- ✅ درخواست task از سرور اصلی دریافت می‌کند
-- ✅ check را اجرا می‌کند
-- ✅ نتیجه را به سرور اصلی برمی‌گرداند
-- ❌ API endpoints عمومی ندارد
-- ❌ Database ندارد
-- ❌ نتایج را ذخیره نمی‌کند
+The Agent is a lightweight worker that:
 
-## نصب
+✅ Receives tasks from the main server
 
-```bash
+✅ Executes network checks
+
+✅ Sends results back to the main server
+
+❌ Has no public API endpoints
+
+❌ Has no database
+
+❌ Does not store results
+
+Installation
 # Clone repository
 git clone https://github.com/Ekipoure/check-host-worker.git
 cd check-host-worker
 
-# نصب dependencies
+# Install dependencies
 npm install
 
-# تنظیم environment variables
+# Set environment variables
 cp .env.example .env
-# ویرایش .env و تنظیم AGENT_ID و سایر متغیرها
+# Edit .env and set AGENT_ID and other variables
 
 # Build project
 npm run build
-```
 
-## نصب Agent روی سرور
-
-```bash
-# نصب Agent با PM2
+Installing the Agent on a Server
+# Install Agent using PM2
 npm run agent:install
 
-# یا دستی:
+# Or manually:
 npm run build
 pm2 start ecosystem.config.js
 pm2 save
-pm2 startup  # برای startup خودکار
-```
+pm2 startup  # Enable auto-start on boot
 
-## API Endpoints
-
-### Execute Task
-```bash
+API Endpoints
+Execute Task
 POST /task/execute
 Content-Type: application/json
 X-API-Key: your-api-key (optional)
@@ -57,10 +55,10 @@ X-API-Key: your-api-key (optional)
   "host": "google.com",
   "options": {}
 }
-```
 
-**Response:**
-```json
+
+Response:
+
 {
   "success": true,
   "taskId": "unique-task-id",
@@ -71,30 +69,28 @@ X-API-Key: your-api-key (optional)
   "result": [...],
   "timestamp": "2025-12-06T..."
 }
-```
 
-### Health Check
-```bash
+Health Check
 GET /health
-```
 
-### Agent Info
-```bash
+Agent Info
 GET /info
-```
 
-## نحوه کار
+How It Works
 
-1. **سرور اصلی** درخواست check را از کاربر دریافت می‌کند
-2. **سرور اصلی** task را به Agent ها ارسال می‌کند
-3. **Agent** check را اجرا می‌کند
-4. **Agent** نتیجه را به سرور اصلی برمی‌گرداند
-5. **سرور اصلی** نتایج را جمع‌آوری و در دیتابیس ذخیره می‌کند
-6. **سرور اصلی** نتایج را به کاربر نمایش می‌دهد
+Main Server receives a check request from the user
 
-## ساختار پروژه
+Main Server dispatches the task to available Agents
 
-```
+Agent executes the check
+
+Agent sends the result back to the main server
+
+Main Server aggregates and stores the results in the database
+
+Main Server displays the results to the user
+
+Project Structure
 worker/
 ├── src/
 │   ├── routes/
@@ -106,51 +102,59 @@ worker/
 ├── package.json
 ├── tsconfig.json
 └── README.md
-```
 
-## تنظیمات
+Configuration
+Environment Variables
 
-### Environment Variables
+AGENT_ID – Unique Agent identifier (required – automatically generated during installation)
 
-- `AGENT_ID` - شناسه یکتا Agent (required - به صورت خودکار توسط سیستم نصب تولید می‌شود)
-- `AGENT_NAME` - نام Agent (required)
-- `AGENT_LOCATION` - موقعیت جغرافیایی
-- `AGENT_COUNTRY_CODE` - کد کشور
-- `AGENT_COUNTRY` - نام کشور
-- `AGENT_CITY` - نام شهر
-- `AGENT_IP` - IP آدرس Agent
-- `AGENT_ASN` - شماره ASN
-- `API_KEY` - API key برای امنیت (optional)
-  - اگر تنظیم شود، وب‌سایت باید همین key را در `WORKER_API_KEY` تنظیم کند
-  - درخواست‌ها باید header `X-API-Key` را داشته باشند
-- `PORT` - Port برای Agent (default: 8000)
-- `HOST` - Host برای Agent (default: 0.0.0.0)
+AGENT_NAME – Agent name (required)
 
-### ارتباط با وب‌سایت
+AGENT_LOCATION – Geographic location
 
-برای ارتباط صحیح بین worker و وب‌سایت:
+AGENT_COUNTRY_CODE – Country code
 
-1. **در worker** (`.env`):
-   ```env
-   API_KEY=your-secret-key-here
-   PORT=8000
-   ```
+AGENT_COUNTRY – Country name
 
-2. **در web** (`.env`):
-   ```env
-   WORKER_API_URL=http://localhost:8000
-   WORKER_API_KEY=your-secret-key-here
-   ```
+AGENT_CITY – City name
 
-نکته: `WORKER_API_KEY` در web باید با `API_KEY` در worker یکسان باشد.
+AGENT_IP – Agent IP address
 
-## مدیریت Agent
+AGENT_ASN – ASN number
 
-```bash
-# مشاهده وضعیت
+API_KEY – API key for security (optional)
+
+If set, the website must configure the same key as WORKER_API_KEY
+
+Requests must include the X-API-Key header
+
+PORT – Agent port (default: 8000)
+
+HOST – Agent host (default: 0.0.0.0)
+
+Website Integration
+
+To properly connect the worker with the website:
+
+In worker (.env):
+
+API_KEY=your-secret-key-here
+PORT=8000
+
+
+In web (.env):
+
+WORKER_API_URL=http://localhost:8000
+WORKER_API_KEY=your-secret-key-here
+
+
+Note: WORKER_API_KEY in the web app must match API_KEY in the worker.
+
+Agent Management
+# Check status
 pm2 status
 
-# مشاهده لاگ‌ها
+# View logs
 pm2 logs check-host-worker
 
 # Restart
@@ -159,13 +163,10 @@ pm2 restart check-host-worker
 # Stop
 pm2 stop check-host-worker
 
-# حذف Agent
+# Uninstall Agent
 npm run agent:uninstall
-```
 
-## مثال استفاده از API
-
-```bash
+API Usage Examples
 # Ping check
 curl -X POST http://agent-server:8000/task/execute \
   -H "Content-Type: application/json" \
@@ -184,8 +185,7 @@ curl -X POST http://agent-server:8000/task/execute \
     "checkType": "http",
     "host": "https://google.com"
   }'
-```
 
-## License
+License
 
 MIT
